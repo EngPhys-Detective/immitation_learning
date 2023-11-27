@@ -1,0 +1,7 @@
+<!-- My Package launch file -->
+
+   <node pkg="immitation_learning"
+         type="keyboard_input.py"
+         name="keyboard_input" 
+         output="screen">
+   </node>
