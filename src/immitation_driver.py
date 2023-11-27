@@ -28,7 +28,7 @@ class Driver():
     stop_msg.linear.x = 0
     stop_msg.angular.z = 0
 
-    def __init__(self, run_count, cnn_path) -> None:
+    def __init__(self, cnn_path) -> None:
         self.bridge = CvBridge()
         
         rospy.init_node('keyboard_controller')
@@ -36,11 +36,10 @@ class Driver():
         self.velocity_pub = rospy.Publisher('R1/cmd_vel', Twist, queue_size=1)
         self.postition = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
         self.image_sub = rospy.Subscriber('/R1/pi_camera/image_raw', Image, self.callback)
-        self.count = 0
-        self.run_count = run_count
         self.prev_key = None
         self.twist = Twist()
         self.cnn_model = ks.models.load_model(cnn_path)
+        time.sleep(1)
         print("----- CNN Model Successfully Loaded -----")
 
         # self.reset_position()
@@ -68,31 +67,31 @@ class Driver():
     
     def move(self, command):
         if command == 0:
-            self.twist.linear.x = 0.75
+            self.twist.linear.x = 0.65
             self.twist.angular.z = 0
         elif command == 1:
             self.twist.linear.x = 0
-            self.twist.angular.z = 0.5
+            self.twist.angular.z = 0.45
         elif command == 2:
             self.twist.linear.x = 0
-            self.twist.angular.z = -0.5
+            self.twist.angular.z = -0.45
         elif command == 3:
             self.twist.linear.x = 0
             self.twist.angular.z = 0
 
         self.velocity_pub.publish(self.twist)
-        rospy.sleep(0.1)
+        rospy.sleep(0.08)
         self.velocity_pub.publish(self.stop_msg)
 
     def predict_command(self, cv_image):
         # resize image to 72x128
-        cv_image = cv2.resize(cv_image, (128, 72))
+        cv_image = cv2.resize(cv_image[72:720,:,:], (128, 72))
         # add axis
-        prediction = self.cnn_model.predict(np.expand_dims(cv_image, axis=0))
+        prediction = self.cnn_model.predict(np.expand_dims(cv_image, axis=0), verbose=0)
         return np.argmax(prediction)
 
 if __name__ == '__main__': 
-    driver = Driver(5, cnn_path)
+    driver = Driver(cnn_path)
     print(driver.startmsg)
 
     try:

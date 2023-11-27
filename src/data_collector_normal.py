@@ -16,6 +16,8 @@ import sys, select, termios, tty
 from gazebo_msgs.srv import SetModelState
 from gazebo_msgs.msg import ModelState
 
+data_dir = '/home/fizzer/enph_ws/src/immitation_learning/data'
+
 class KeyboardController():
     
     startmsg = "TeamName,password,0,NA"
@@ -23,13 +25,11 @@ class KeyboardController():
 
     initial_position = [5.5, 2.5]
     
- 
-    target_path = '/home/fizzer/enph_ws/src/immitation_learning/data'
     stop_msg = Twist()
     stop_msg.linear.x = 0
     stop_msg.angular.z = 0
 
-    def __init__(self, run_count) -> None:
+    def __init__(self, run_count, target_path) -> None:
         self.bridge = CvBridge()
         
         rospy.init_node('keyboard_controller')
@@ -41,6 +41,7 @@ class KeyboardController():
         self.run_count = run_count
         self.prev_key = None
         self.twist = Twist()
+        self.target_path = target_path
 
         # self.reset_position()
 
@@ -66,10 +67,13 @@ class KeyboardController():
         self.move(key)
         self.prev_key = key
 
-        self.save_image(key, cv_image)
-        self.count += 1
+        if key is not None:
+            self.save_image(key, cv_image)
+            self.count += 1
     
     def save_image(self, key, cv_image):
+        cv_image = cv2.resize(cv_image[72:720,:,:], (128, 72))
+
         if key == 'i':
             cv2.imwrite(self.target_path + '/forward/' + str(self.run_count) + '_' + str(self.count) + '.png', cv_image)
         elif key == 'j':
@@ -97,21 +101,30 @@ class KeyboardController():
             self.twist.angular.z = 0
         elif key == 'j':
             self.twist.linear.x = 0
-            self.twist.angular.z = 0.4
+            self.twist.angular.z = 0.35
         elif key == 'l':
             self.twist.linear.x = 0
-            self.twist.angular.z = -0.4
+            self.twist.angular.z = -0.35
         elif key == 'k':
             self.twist.linear.x = 0
             self.twist.angular.z = 0
 
         self.velocity_pub.publish(self.twist)
 
+def set_params():
+    run_count = input("Enter run count: ")
+    track = input("Enter track path (paved=1/dirt=2): ")
+    if track == str(1):
+        target_path = data_dir + '/paved_track'
+    elif track == str(2):
+        target_path = data_dir + '/dirt_track'
+    
+    return int(run_count), target_path
 
 if __name__ == '__main__': 
-    kc = KeyboardController(5)
+    count, path = set_params()
+    kc = KeyboardController(count, path)
     print(kc.startmsg)
-    kc.move(kc.get_key())
 
     try:
         rospy.spin()
